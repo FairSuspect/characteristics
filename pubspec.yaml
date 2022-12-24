@@ -1,0 +1,18 @@
+name: characteristics
+description: A sample command-line application.
+version: 1.0.0
+publish_to: none
+# homepage: https://www.example.com
+
+environment:
+  sdk: '>=2.18.4 <3.0.0'
+
+
+dev_dependencies:
+  lints: 
+  test: ^1.16.0
+dependencies:
+  equatable: 
+  excel: 
+  html: ^0.15.0
+  intl: ^0.17.0
