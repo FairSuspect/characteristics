@@ -1,12 +1,9 @@
 import 'dart:math';
 
-import 'package:characteristics/characteristics.dart' as characteristics;
 import 'package:characteristics/characteristics.dart';
 import 'package:characteristics/models/person.dart';
 import 'package:excel/excel.dart';
 
-import 'package:html/dom.dart';
-import 'package:html/parser.dart';
 import 'package:intl/date_symbol_data_local.dart';
 import 'package:intl/intl.dart';
 import 'dart:io';
@@ -14,14 +11,20 @@ import 'dart:io';
 void main() async {
   Intl.defaultLocale = 'ru_RU';
   await initializeDateFormatting('ru_RU', null);
+  print(DateFormat.yMMMMEEEEd().format(DateTime.now()));
 
-  // Считываем дату, на которую нужно создать характеристику
-  print("Введите дату в формате д.месяц.гггг: ");
-  String? inputDateStr;
-  while (inputDateStr == null) {
-    inputDateStr = stdin.readLineSync();
+  DateTime? moment;
+  while (moment == null) {
+    // Считываем дату, на которую нужно создать характеристику
+    print("Введите дату в формате день месяц гггг: ");
+    String? inputDateStr;
+    while (inputDateStr == null) {
+      inputDateStr = stdin.readLineSync()?.toLowerCase().replaceAll('ё', 'е');
+    }
+
+    moment = parseDate(inputDateStr);
   }
-  final DateTime moment = parseDate(inputDateStr);
+
   final rows = getRows();
   // Создаем характеристику для каждого сотрудника
   List<String> characteristics = [];
@@ -60,13 +63,13 @@ void main() async {
       }
     }
     if (person.resignationDate != null) {
-      if (person.resignationDate!.isBefore(moment)) {
+      if (person.resignationDate.isBefore(moment)) {
         if (person.positionChanges.isEmpty) {
           characteristic +=
-              '<li> Окончательно ${resigned(person.gender)} ${DateFormat.yMMMMd('ru').format(person.resignationDate!)}. </li>';
+              '<li> Окончательно ${resigned(person.gender)} ${DateFormat.yMMMMd('ru').format(person.resignationDate)}. </li>';
         } else {
           characteristic +=
-              '<li> У${resigned(person.gender).substring(1)} ${DateFormat.yMMMMd('ru').format(person.resignationDate!)} в связи с переходом на должность "${person.positionChanges.first.position}". </li>';
+              '<li> У${resigned(person.gender).substring(1)} ${DateFormat.yMMMMd('ru').format(person.resignationDate)} в связи с переходом на должность "${person.positionChanges.first.position}". </li>';
         }
       }
     }
@@ -164,40 +167,57 @@ List<Map<String, dynamic>> getRows() {
   return rows;
 }
 
-DateTime parseDate(String dateString) {
-  final dateRegex = RegExp(r"(\d{2})\.([а-яА-Я]+)\.(\d{4})");
-  final match = dateRegex.firstMatch(dateString)!;
-  final day = int.parse(match[1]!);
-  final month = match[2];
-  final year = int.parse(match[3]!);
+DateTime? parseDate(String dateString) {
+  try {
+    final dateRegex = RegExp(r"([а-яА-Я]+)\ ([а-яА-Я]+)\ (\d{4})");
+    final match = dateRegex.firstMatch(dateString)!;
+    final day = match[1]!;
+    final month = match[2];
+    final year = int.parse(match[3]!);
 
-  const months = {
-    "янв": 1,
-    "янв.": 1,
-    "февр": 2,
-    "февр.": 2,
-    "март": 3,
-    "март.": 3,
-    "апр": 4,
-    "апр.": 4,
-    "май": 5,
-    "май.": 5,
-    "июнь": 6,
-    "июнь.": 6,
-    "июль": 7,
-    "июль.": 7,
-    "авг": 8,
-    "авг.": 8,
-    "сент": 9,
-    "сент.": 9,
-    "окт": 10,
-    "окт.": 10,
-    "нояб": 11,
-    "нояб.": 11,
-    "дек": 12,
-    "дек.": 12,
-  };
-  return DateTime(year, months[month]!, day);
+    const months = {
+      "янв": 1,
+      "янв.": 1,
+      "января": 1,
+      "февр": 2,
+      "февр.": 2,
+      "февраля": 2,
+      "март": 3,
+      "март.": 3,
+      "марта": 3,
+      "апр": 4,
+      "апр.": 4,
+      "апреля": 4,
+      "май": 5,
+      "май.": 5,
+      "мая": 5,
+      "июнь": 6,
+      "июнь.": 6,
+      "июня.": 6,
+      "июль": 7,
+      "июль.": 7,
+      "июля": 7,
+      "авг": 8,
+      "авг.": 8,
+      "августа": 8,
+      "сент": 9,
+      "сент.": 9,
+      "сентября": 9,
+      "окт": 10,
+      "окт.": 10,
+      "октября": 10,
+      "нояб": 11,
+      "нояб.": 11,
+      "ноября": 11,
+      "дек": 12,
+      "дек.": 12,
+      "декабря": 12,
+    };
+    return DateTime(year, months[month]!, fullDays[day]!);
+  } catch (e) {
+    print("Ошибка при считывании даты: $e");
+    return null;
+  }
 }
 
 const mKeys = {
@@ -213,6 +233,40 @@ const mKeys = {
   10: "окт",
   11: "нояб",
   12: "дек"
+};
+
+const fullDays = {
+  "первое": 1,
+  "второе": 2,
+  "третье": 3,
+  "четвертое": 4,
+  "пятое": 5,
+  "шестое": 6,
+  "седьмое": 7,
+  "восьмое": 8,
+  "девятое": 9,
+  "десятое": 10,
+  "одиннадцатое": 11,
+  "двенадцатое": 12,
+  "тринадцатое": 13,
+  "четырнадцатое": 14,
+  "пятнадцатое": 15,
+  "шестнадцатое": 16,
+  "семнадцатое": 17,
+  "восемнадцатое": 18,
+  "девятнадцатое": 19,
+  "двадцатое": 20,
+  "двадцать первое": 21,
+  "двадцать второе": 22,
+  "двадцать третье": 23,
+  "двадцать четвертое": 24,
+  "двадцать пятое": 25,
+  "двадцать шестое": 26,
+  "двадцать седьмое": 27,
+  "двадцать восьмое": 28,
+  "двадцать девятое": 29,
+  "тридцатое": 30,
+  "тридцать первое": 31,
 };
 
 const List<Map<String, dynamic>> _rows = [
