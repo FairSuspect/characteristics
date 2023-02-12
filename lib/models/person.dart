@@ -50,6 +50,10 @@ class Person {
   String toString() {
     return "[$name, $gender, $birthDate]";
   }
+
+  bool get isMale => gender.toLowerCase().contains('ж');
+
+  bool get isBorn => birthDate.isBefore(DateTime.now());
 }
 
 class PositionChange {

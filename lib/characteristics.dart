@@ -6,18 +6,31 @@ int calculate() {
   return 6 * 7;
 }
 
-Future<void> saveHtml(List<String> characteristics) async {
+Future<void> saveHtml(Map<String, String> characteristics) async {
   String html = "<html><body>";
-
-  for (var characteristic in characteristics) {
-    html += "<p>$characteristic</p>";
-  }
+  html += '<ol>';
+  characteristics.forEach((key, value) {
+    html += '<li><a href="$key.html"> $key </a></li><br>';
+    saveOne(key, value);
+  });
+  html += '</ul>';
   html +=
       "<p>Дата созадния документа ${DateFormat.yMd().format(DateTime.now())}</p>";
   html += "</body></html>";
+  final File file = File("output/general.html");
+  await file.writeAsString(html);
+}
+
+Future<void> saveOne(String name, String characteristic) async {
+  String html = "<html><body><div text=align:justify>";
+
+  html += characteristic;
+
+  html +=
+      "<p>Дата созадния документа ${DateFormat.yMd().format(DateTime.now())}</p>";
+  html += "</div></body></html>";
 
 // Сохраняем файл
-  File file = File("characteristics.html");
+  final File file = File("output/$name.html");
   await file.writeAsString(html);
-  print('file has been written');
 }

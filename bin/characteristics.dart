@@ -1,6 +1,9 @@
 import 'dart:math';
 
 import 'package:characteristics/characteristics.dart';
+import 'package:characteristics/helpers/date_formate.dart';
+import 'package:characteristics/helpers/position.dart';
+import 'package:characteristics/helpers/verbs.dart';
 import 'package:characteristics/models/person.dart';
 import 'package:excel/excel.dart';
 
@@ -13,21 +16,21 @@ void main() async {
   await initializeDateFormatting('ru_RU', null);
   print(DateFormat.yMMMMEEEEd().format(DateTime.now()));
 
-  DateTime? moment;
-  while (moment == null) {
-    // Считываем дату, на которую нужно создать характеристику
-    print("Введите дату в формате день месяц гггг: ");
-    String? inputDateStr;
-    while (inputDateStr == null) {
-      inputDateStr = stdin.readLineSync()?.toLowerCase().replaceAll('ё', 'е');
-    }
+  // DateTime? moment;
+  // while (moment == null) {
+  //   // Считываем дату, на которую нужно создать характеристику
+  //   print("Введите дату в формате день месяц гггг: ");
+  //   String? inputDateStr;
+  //   while (inputDateStr == null) {
+  //     inputDateStr = stdin.readLineSync()?.toLowerCase().replaceAll('ё', 'е');
+  //   }
 
-    moment = parseDate(inputDateStr);
-  }
+  //   moment = parseDate(inputDateStr);
+  // }
 
   final rows = getRows();
   // Создаем характеристику для каждого сотрудника
-  List<String> characteristics = [];
+  Map<String, String> characteristics = {};
 
   Set<Person> persons = {};
 
@@ -43,61 +46,79 @@ void main() async {
     }
   }
   for (var person in persons) {
-    if (person.birthDate.isAfter(moment)) {
-      continue;
-    }
-    String characteristic = "Характеристика. <br>";
+    // if (person.birthDate.isAfter(moment)) {
+    //   continue;
+    // }
+    String characteristic =
+        '<div align=center><H2 style="margin-left: auto; margin-right: auto;"> ХАРАКТЕРИСТИКА </H2> </div><br>';
 
     /// Родился
-    characteristic += born(person);
+    characteristic += _born(person);
 
-    if (person.hireDate.isBefore(moment)) {
-      late final _pos =
-          // person.positionChanges.isNotEmpty
-          //     ? person.positionChanges.first.position
-          //     :
-          person.position;
-      if (person.hireDate.isBefore(moment)) {
-        characteristic +=
-            '<li>${DateFormat.yMMMMd('ru').format(person.hireDate)} ${hired(person.gender)} на работу в Фонд на должность "$_pos". </li>';
-      }
+    // if (person.hireDate.isBefore(moment)) {
+    late final _pos = position(person.position);
+    // person.positionChanges.isNotEmpty
+    //     ? person.positionChanges.first.position
+    //     :
+
+    // if (person.hireDate.isBefore(moment)) {
+
+    final hireDate = person.hireDate.toRussianDate.replaceFirst(
+        person.hireDate.toRussianDate[0],
+        person.hireDate.toRussianDate[0].toUpperCase());
+
+    /// Устроился
+    characteristic +=
+        '<p>$hireDate ${hired(isMale: person.isMale, inFuture: !person.isBorn)} на работу в Фонд на должность ${_pos.toLowerCase()}. </p>';
+    // }
+    // }
+    // if (person.resignationDate != null) {
+    // if (person.resignationDate.isBefore(moment)) {
+
+    final firedString = fired(
+        inFuture: person.resignationDate.isAfter(DateTime.now()),
+        isMale: person.isMale);
+    // Позиция - единственная
+    if (person.positionChanges.isEmpty) {
+      characteristic +=
+          // '<p> Окончательно ${resigned(person.gender)} ${DateFormat.yMMMMd('ru').format(person.resignationDate)}. </p>';
+          finalFire(firedString, person.resignationDate);
+    } else {
+      characteristic +=
+          '<p> У$firedString ${DateFormat.yMMMMd('ru').format(person.resignationDate)} в связи с переходом на должность "${position(person.positionChanges.first.position)}". </p>';
     }
-    if (person.resignationDate != null) {
-      if (person.resignationDate.isBefore(moment)) {
-        if (person.positionChanges.isEmpty) {
-          characteristic +=
-              '<li> Окончательно ${resigned(person.gender)} ${DateFormat.yMMMMd('ru').format(person.resignationDate)}. </li>';
-        } else {
-          characteristic +=
-              '<li> У${resigned(person.gender).substring(1)} ${DateFormat.yMMMMd('ru').format(person.resignationDate)} в связи с переходом на должность "${person.positionChanges.first.position}". </li>';
-        }
-      }
-    }
+    // }
+    // }
     for (int i = 0; i < person.positionChanges.length; ++i) {
       final pos = person.positionChanges[i];
       if (i == person.positionChanges.length - 1) {
-        if (pos.endDate != null && pos.endDate!.isBefore(moment)) {
-          characteristic +=
-              "<li>Окончательно ${resigned(person.gender)} ${DateFormat.yMMMMd('ru').format(pos.endDate!)}. </li>";
-        }
+        // if (pos.endDate != null && pos.endDate!.isBefore(moment)) {
+        characteristic +=
+            "<p>Окончательно $firedString ${DateFormat.yMMMMd('ru').format(pos.endDate!)}. </p>";
+        // }
         break;
       }
-      if (pos.endDate != null && pos.endDate!.isBefore(moment)) {
-        characteristic +=
-            '<li>У${resigned(person.gender).substring(1)} ${DateFormat.yMMMMd('ru').format(pos.endDate!)} в связи с переходом на должность "${person.positionChanges[i + 1].position}". </li>';
-      }
+      // if (pos.endDate != null && pos.endDate!.isBefore(moment)) {
+      characteristic +=
+          '<p>У$firedString ${pos.endDate!.toRussianDate} в связи с переходом на должность "${position(person.positionChanges[i + 1].position)}". </p>';
+      // }
     }
-    characteristic += '</ul>';
 
-    characteristics.add(characteristic);
+    characteristics[person.name] = characteristic;
   }
   saveHtml(characteristics);
 }
 
-String born(Person person) =>
-    "${person.name} родился ${DateFormat.MMMMd('ru').format(person.birthDate)} ${person.birthDate.year} года. <br><ul>";
+String finalFire(String firedString, DateTime resignationDate) {
+  return '<p>\tОкончательно $firedString ${resignationDate.toRussianDate}. </p>';
+}
 
-String hired(String gender) {
+String _born(Person person) => "\t${person.name} ${born(
+      inFuture: person.birthDate.isAfter(DateTime.now()),
+      isMale: person.isMale,
+    )} ${person.birthDate.toRussianDate}. <br>";
+
+String _hired(String gender) {
   if (gender.contains('м')) {
     return "устроился";
   }
